@@ -3,6 +3,21 @@ import os
 from typing import TypeVar, Generic
 import typing as t
 
+class CustomJSONEncoder(json.JSONEncoder):
+    _custom_serializers = {}
+
+    @staticmethod
+    def register_serializer(type, serializer):
+        CustomJSONEncoder._custom_serializers[type] = serializer
+
+    def default(self, obj):
+        try:
+            return super().default(obj)
+        except TypeError:
+            if type(obj) in self._custom_serializers:
+                return self._custom_serializers[type(obj)](obj)
+            return str(obj)
+
 K = TypeVar('K')
 V = TypeVar('V')
 class FiledDict(Generic[K, V]):
@@ -18,6 +33,7 @@ class FiledDict(Generic[K, V]):
         """
         self.file = file
         self.autosave = autosave
+        self.default = default
         if (not self.load()):
             self._settings = default
         self.save()
@@ -48,15 +64,20 @@ class FiledDict(Generic[K, V]):
     def save(self):
         if (self.file is not None):
             f = open(self.file,'w')
-            f.write(json.dumps(self._settings, indent=4))
+            f.write(json.dumps(self._settings, indent=4, cls=CustomJSONEncoder))
 
     def load(self):
         if (self.file is None):
             return False
         if os.path.isfile(self.file):
             f = open(self.file,'r')
-            self._settings = json.load(f)
-            f.close()
+            try:
+                self._settings = json.load(f, cls=CustomJSONEncoder)
+            except:
+                self._settings = self.default
+                self.save()
+            finally:
+                f.close()
             return True
         return False
 
@@ -74,3 +95,4 @@ class FiledDict(Generic[K, V]):
 
     def remove(self, item: V) -> None:
         return self._settings.remove(item)
+

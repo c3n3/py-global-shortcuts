@@ -17,7 +17,7 @@ def main():
     binder = pygs.get_binder()
     binder.add_binding("<Ctrl><Alt>H", call_this)
     print(binder.get_current_bindings())
-    binder.remove_binding("<Ctrl><Alt>H")
+    # binder.remove_binding("<Ctrl><Alt>H")
     print(binder.get_current_bindings())
 
 if __name__ == "__main__":

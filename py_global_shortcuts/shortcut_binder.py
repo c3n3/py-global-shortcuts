@@ -1,6 +1,6 @@
 from typing import Callable
 from . import globals as g
-from . filed_dict import FiledDict
+from . filed_dict import FiledDict, CustomJSONEncoder
 import os
 
 class Binding:
@@ -43,3 +43,5 @@ class ShortcutBinder:
             self.shortcuts[shortcut].function()
         else:
             print(f"No function registered for shortcut: {shortcut}")
+
+CustomJSONEncoder.register_serializer(Binding, lambda b: {"shortcut": b.shortcut, "function": str(b.function)})
