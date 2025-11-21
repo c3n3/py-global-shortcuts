@@ -4,30 +4,45 @@ from typing import TypeVar, Generic
 import typing as t
 
 class CustomJSONEncoder(json.JSONEncoder):
-    _custom_serializers = {}
-
-    @staticmethod
-    def register_serializer(type, serializer):
-        CustomJSONEncoder._custom_serializers[type] = serializer
-
     def default(self, obj):
         try:
             return super().default(obj)
         except TypeError:
-            if type(obj) in self._custom_serializers:
-                return self._custom_serializers[type(obj)](obj)
+            if type(obj) in FiledDict._custom_serializers:
+                return FiledDict._custom_serializers[type(obj)](obj)
             return str(obj)
+
+class CustomJSONDecoder(json.JSONDecoder):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.object_hook = self._custom_object_hook
+
+    def _custom_object_hook(self, dct):
+        if FiledDict._custom_dict_deserializer is not None:
+            try:
+                return FiledDict._custom_dict_deserializer(dct)
+            except (KeyError, ValueError, TypeError):
+                pass
+        return dct
 
 K = TypeVar('K')
 V = TypeVar('V')
 class FiledDict(Generic[K, V]):
+    _custom_serializers = {}
+    _custom_dict_deserializer: t.Callable = None
+
+    @staticmethod
+    def register_serializer(type, serializer):
+        FiledDict._custom_serializers[type] = serializer
+
+
     """ Tries its best to mimick a json file, and reflect changes in file upon saving.
         Very useful for handling settings that need to be persistent
     """
 
     def __init__(self, file: str, autosave: bool = True, default: t.Dict[K, V] = {}):
         """ The file to mirror
-
+serializer
         Args:
             file (string): path to the file
         """

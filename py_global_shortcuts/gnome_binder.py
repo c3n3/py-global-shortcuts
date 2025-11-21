@@ -2,24 +2,22 @@ import re
 from . import utilities as u
 from . import shortcut_binder as sb
 from . import globals as g
+from typing import Union
 import subprocess
 
 
-class GnomeBinder(sb.ShortcutBinder):
+class GnomeBinder(sb.KeyBinder):
     def _get_binding_path_prefix(self) -> str:
         return f"/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/{u.unique_id()}"
 
-    def remove_binding(self, shortcut: str):
-        print("Removing binding for shortcut:", shortcut)
+
+    def _deregister_key_binding(self, shortcut: str):
         current_bindings = self._get_gsettings_bindings_list()
         bindingpath = f"{self._get_binding_path_prefix()}/{shortcut}/"
         if bindingpath not in current_bindings:
-            print("Binding path not found, nothing to remove.")
             return
         current_bindings.remove(bindingpath)
         self._set_gsettings_bindings_list(current_bindings)
-        print(current_bindings)
-        self._deregister_shortcut(shortcut)
 
 
     def _set_gsettings_bindings_list(self, bindings: list[str]):
@@ -85,12 +83,20 @@ class GnomeBinder(sb.ShortcutBinder):
     def cleanup(self):
         self._remove_current_bindings_from_gsettings()
 
-    def add_binding(self, shortcut, function):
+    def _register_key_binding(self, shortcut):
+        # binding_command = f"terminator -x bash -c '{u.get_exec_bash(shortcut)}; exec bash'"
         binding_command = f"{u.get_exec_bash(shortcut)}"
-        self._register_shortcut(shortcut, function)
-        self._add_binding(shortcut, binding_command)
+        self.gnome_register_key_binding(shortcut, binding_command)
 
-    def _add_binding(self, shortcut, command):
+    def _sanitize_binding_str_for_gnome(self, binding_str: str) -> str:
+        if "+" in binding_str:
+            binding_str = binding_str.replace("+", "")
+        return binding_str.lower()
+
+    def gnome_register_key_binding(self, shortcut, command):
+        # Pynput has a slightly different style
+        shortcut = self._sanitize_binding_str_for_gnome(shortcut)
+
         # Get the current list of custom keybindings
         result = subprocess.run(
             ["gsettings", "get", g.GSETTINGS_SCHEMA, g.GSETTINGS_KEY],

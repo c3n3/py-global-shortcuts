@@ -5,3 +5,6 @@ uv.lock
 .venv/
 .python-version
 *.spec
+dist/
+.vscode/
+build/

@@ -3,13 +3,14 @@ import sys
 from . import globals as g
 from . import shortcut_binder as sb
 from . import utilities as u
+from . shortcut_binder import Command, KeyBinding, KeyBinder
 
-_binder: sb.ShortcutBinder = None
+_binder: sb.KeyBinder = None
 _comms = None
 
-def init(appname, cache_dir="./temp"):
+def init(appname: str, cache_dir="./temp"):
     import os
-
+    
     if not os.path.exists(cache_dir):
         os.makedirs(cache_dir)
 
@@ -19,7 +20,7 @@ def init(appname, cache_dir="./temp"):
         with open(g.cache_file, "w") as f:
             f.write("{}")
 
-    g.appname = appname
+    g.appname = appname.replace(" ", "")
 
     global _binder
     if u.is_gnome_wayland():
@@ -30,7 +31,8 @@ def init(appname, cache_dir="./temp"):
         _binder = GnomeBinder()
         _comms.start_server(_binder.handle_shortcut)
     else:
-        raise NotImplementedError(f"Shortcut binder not implemented for {platform.system()} yet.")
+        from .pynput_binder import PynputBinder
+        _binder = PynputBinder()
 
 def deinit():
     global _comms
@@ -39,12 +41,12 @@ def deinit():
     if _binder is not None:
         _binder.cleanup()
 
-def binding_handle(appname):
-    g.appname = appname
+def binding_handle(appname: str):
+    g.appname = appname.replace(" ", "")
     if len(sys.argv) < 4:
         return
     if g.BINDING_ID_STR == sys.argv[1]:
-        pygsstr, input_appname, unique_id = sys.argv[2].split("__")
+        pygsstr, input_appname, unique_id = sys.argv[2].split(g.BASH_COMMAND_SEPERATOR)
         shortcut = sys.argv[3]
         assert pygsstr == "pygs"
         print("Handling binding for app:", sys.argv)
@@ -66,7 +68,7 @@ def binding_handle(appname):
             comms.send_json({"shortcut": f"{shortcut}"})
         exit(0)
 
-def get_binder() -> sb.ShortcutBinder:
+def get_binder() -> sb.KeyBinder:
     global _binder
     if _binder is None:
         raise RuntimeError("Binder not initialized. Call init() first.")

@@ -5,22 +5,28 @@ import sys
 
 from . import globals as g
 
+# We need a unique ID per application instance to avoid conflicts
 _unique_id_str = str(uuid.uuid4())
+
 
 def set_unique_id(id_str: str):
     global _unique_id_str
     _unique_id_str = id_str
 
+
 def app_id():
-    return f"pygs__{g.appname}"
+    return f"pygs{g.BASH_COMMAND_SEPERATOR}{g.appname}"
+
 
 def unique_id():
-    return f"{app_id()}__{_unique_id_str}"
+    return f"{app_id()}{g.BASH_COMMAND_SEPERATOR}{_unique_id_str}"
+
 
 def is_gnome_wayland():
     if platform.system() != "Linux":
         return False
     return os.environ.get("XDG_SESSION_TYPE") == "wayland" and "ubuntu" in os.environ.get("DESKTOP_SESSION", "")
+
 
 def get_exec_bash(shortcut: str = ""):
     main_python_file = os.path.abspath(sys.argv[0])
