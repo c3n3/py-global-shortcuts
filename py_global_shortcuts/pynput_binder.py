@@ -8,10 +8,10 @@ import pynput
 
 class PynputBinder(sb.KeyBinder):
     def __init__(self):
-        super().__init__()
+        self._hotkeys: dict[str, pynput.keyboard.HotKey] = {}
         self._key_listener = pynput.keyboard.Listener(on_press=self._on_press, on_release=self._on_release)
         self._key_listener.start()
-        self._hotkeys: dict[str, pynput.keyboard.HotKey] = {}
+        super().__init__()
 
 
     def _on_press(self, key):

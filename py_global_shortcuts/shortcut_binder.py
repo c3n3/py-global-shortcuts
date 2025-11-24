@@ -68,6 +68,8 @@ class KeyBinder:
     def __init__(self):
         self.shortcuts: FiledDict[str, KeyBinding] = FiledDict(g.cache_file, autosave=True, default={})
         self.commands: dict[str, Command] = {}
+        for shortcut in self.shortcuts.keys():
+            self._register_key_binding(shortcut)
 
 
     def register_command(self, command: Command):
@@ -76,6 +78,13 @@ class KeyBinder:
 
     def get_key_bindings(self) -> list[KeyBinding]:
         return list(self.shortcuts.values())
+
+
+    def get_key_binding(self, shortcut: str) -> KeyBinding:
+        shortcut = self._sanitize_binding_str(shortcut)
+        if shortcut in self.shortcuts:
+            return self.shortcuts[shortcut]
+        return None
 
 
     def get_commands(self) -> list[Command]:
@@ -99,13 +108,15 @@ class KeyBinder:
         if shortcut in self.shortcuts:
             del self.shortcuts[shortcut]
             self._deregister_key_binding(shortcut)
+        self.shortcuts.save()
 
 
     def create_key_binding(self, shortcut: str):
         shortcut = self._sanitize_binding_str(shortcut)
         if shortcut not in self.shortcuts:
             self.shortcuts[shortcut] = KeyBinding(shortcut)
-        self._register_key_binding(shortcut)
+            self._register_key_binding(shortcut)
+            self.shortcuts.save()
 
 
     def unlink_command(self, shortcut: str, command: Union[Command, str]):
@@ -114,6 +125,7 @@ class KeyBinder:
             command = command.cmd_id
         if shortcut in self.shortcuts:
             self.shortcuts[shortcut].remove_command(command)
+        self.shortcuts.save()
 
 
     def link_command(self, shortcut: str, command: Union[Command, str]):
@@ -122,6 +134,7 @@ class KeyBinder:
             self.shortcuts[shortcut] = KeyBinding(shortcut)
         self.shortcuts[shortcut].add_command(command)
         self._register_key_binding(shortcut)
+        self.shortcuts.save()
 
 
     def handle_shortcut(self, shortcut: str):
@@ -155,7 +168,10 @@ def _binding_serializer(bnd: 'KeyBinding'):
 
 def _binding_deserializer(dct):
     if "_cls_" in dct and dct["_cls_"] == "KeyBinding":
-        return KeyBinding(dct["shortcut"], dct["command_id"])
+        ret = KeyBinding(dct["shortcut"])
+        for cmd_id in dct["commands"]:
+            ret.add_command(cmd_id)
+        return ret
     return dct
 
 

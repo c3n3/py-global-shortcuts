@@ -14,14 +14,13 @@ class CustomJSONEncoder(json.JSONEncoder):
 
 class CustomJSONDecoder(json.JSONDecoder):
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.object_hook = self._custom_object_hook
+        json.JSONDecoder.__init__(self, object_hook=self._custom_object_hook, *args, **kwargs)
 
     def _custom_object_hook(self, dct):
         if FiledDict._custom_dict_deserializer is not None:
             try:
                 return FiledDict._custom_dict_deserializer(dct)
-            except (KeyError, ValueError, TypeError):
+            except (KeyError, ValueError, TypeError) as e:
                 pass
         return dct
 
@@ -87,12 +86,14 @@ serializer
         if os.path.isfile(self.file):
             f = open(self.file,'r')
             try:
-                self._settings = json.load(f, cls=CustomJSONEncoder)
-            except:
+                self._settings = json.load(f, cls=CustomJSONDecoder)
+            except json.JSONDecodeError as e:
+                print("Failed to load settings file, using default.", str(e))
                 self._settings = self.default
                 self.save()
             finally:
                 f.close()
+            print(self._settings)
             return True
         return False
 

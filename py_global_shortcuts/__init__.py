@@ -18,6 +18,7 @@ def init(appname: str, cache_dir="./temp"):
 
     if not os.path.exists(g.cache_file):
         with open(g.cache_file, "w") as f:
+            print("Creating cache file at", g.cache_file)
             f.write("{}")
 
     g.appname = appname.replace(" ", "")
