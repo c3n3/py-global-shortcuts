@@ -8,7 +8,8 @@ from . shortcut_binder import Command, KeyBinding, KeyBinder
 _binder: sb.KeyBinder = None
 _comms = None
 
-def init(appname: str, cache_dir="./temp"):
+def init(appname: str, cache_dir="./temp", only_single_instance=False):
+    g.single_instance = only_single_instance
     import os
     
     if not os.path.exists(cache_dir):
@@ -30,6 +31,10 @@ def init(appname: str, cache_dir="./temp"):
         _comms = linux_comms.ProcessCommunicator.get_global_communicator()
         from .gnome_binder import GnomeBinder
         _binder = GnomeBinder()
+        if g.single_instance:
+            # Delete any existing bindings
+            _binder.cleanup()
+            _binder.init_bindings()
         _comms.start_server(_binder.handle_shortcut)
     else:
         from .pynput_binder import PynputBinder

@@ -68,6 +68,10 @@ class KeyBinder:
     def __init__(self):
         self.shortcuts: FiledDict[str, KeyBinding] = FiledDict(g.cache_file, autosave=True, default={})
         self.commands: dict[str, Command] = {}
+        self.init_bindings()
+
+
+    def init_bindings(self):
         for shortcut in self.shortcuts.keys():
             self._register_key_binding(shortcut)
 

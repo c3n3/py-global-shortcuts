@@ -7,3 +7,4 @@ BASH_COMMAND_SEPERATOR = "___"
 
 cache_file = ""
 appname = None
+single_instance = False

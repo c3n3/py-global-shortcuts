@@ -8,7 +8,10 @@ import subprocess
 
 class GnomeBinder(sb.KeyBinder):
     def _get_binding_path_prefix(self) -> str:
-        return f"/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/{u.unique_id()}"
+        if g.single_instance:
+            return f"/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/{u.app_id()}"
+        else:
+            return f"/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/{u.unique_id()}"
 
 
     def _deregister_key_binding(self, shortcut: str):
@@ -34,6 +37,7 @@ class GnomeBinder(sb.KeyBinder):
         updated_bindings = []
         for b in current_bindings:
             if not b.startswith(self._get_binding_path_prefix()):
+                print("Keeping binding:", b)
                 updated_bindings.append(b)
         self._set_gsettings_bindings_list(updated_bindings)
 
