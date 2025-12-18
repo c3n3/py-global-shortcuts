@@ -1,9 +1,12 @@
 [project]
 name = "py-global-shortcuts"
-version = "0.1.1"
+version = "0.1.2"
 description = "Python library for creating global keyboard shortcuts."
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "pynput>=1.8.1",
 ]
+
+[tool.setuptools]
+packages = ["py_global_shortcuts"]
