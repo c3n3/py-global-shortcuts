@@ -17,6 +17,8 @@ class PynputBinder(sb.KeyBinder):
         self._hotkeys: dict[str, pynput.keyboard.HotKey] = {}
         self._pressed_keys: set = set()
         self._keys_lock = threading.Lock()
+        # One X connection reused by the monitor thread; opening one per poll leaks sockets
+        self._x_display = None
         self._key_listener = pynput.keyboard.Listener(on_press=self._on_press, on_release=self._on_release)
         self._key_listener.start()
         
@@ -25,6 +27,20 @@ class PynputBinder(sb.KeyBinder):
         self._monitor_thread.start()
         
         super().__init__()
+
+    def _get_x_display(self):
+        if self._x_display is None:
+            import Xlib.display
+            self._x_display = Xlib.display.Display()
+        return self._x_display
+
+    def _close_x_display(self):
+        display, self._x_display = self._x_display, None
+        if display is not None:
+            try:
+                display.close()
+            except Exception:
+                pass
 
     def _is_key_physically_pressed(self, key) -> bool:
         """Check if a key is physically pressed using the OS API."""
@@ -45,13 +61,13 @@ class PynputBinder(sb.KeyBinder):
                     if sys.platform.startswith("linux"):
                         # Try to use Xlib to check key state
                         try:
-                            import Xlib.display
-                            display = Xlib.display.Display()
+                            display = self._get_x_display()
                             keycode = display.keysym_to_keycode(vk)
                             state = display.query_keymap()
                             return bool(state[keycode // 8] & (1 << (keycode % 8)))
                         except Exception:
-                            pass
+                            # Drop a possibly broken connection; the next poll reconnects
+                            self._close_x_display()
         except Exception:
             pass
         return False
@@ -100,6 +116,8 @@ class PynputBinder(sb.KeyBinder):
     def cleanup(self):
         self._monitor_stop_event.set()
         self._monitor_thread.join(timeout=1.0)
+        if not self._monitor_thread.is_alive():
+            self._close_x_display()
         self._key_listener.stop()
 
     def _create_hotkey_fun(self, shortcut: str):
